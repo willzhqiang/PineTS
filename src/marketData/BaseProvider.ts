@@ -4,37 +4,15 @@ import { IProvider, ISymbolInfo, BaseProviderConfig } from './IProvider';
 import { Kline, normalizeCloseTime } from './types';
 import { selectSubTimeframe, aggregateCandles, getAggregationRatio } from './aggregation';
 import { stripTickerModifier } from '../tickerModifier';
+import { canonicalTimeframe } from './timeframe';
 
 /**
  * Normalize a user-supplied timeframe key to the canonical form used
- * by `getSupportedTimeframes()` and `TIMEFRAME_SECONDS`.
- *
- * Canonical forms: seconds as 'NS', minutes as plain integers,
- * calendar periods as D/W/M.
+ * by `getSupportedTimeframes()`: seconds as 'NS', minutes as plain integers,
+ * calendar periods as D/W/M (with an optional multiplier). Any valid timeframe is accepted.
  */
-const TF_NORMALIZE: Record<string, string> = {
-    // Lowercase / Binance-style aliases
-    '1s': '1S', '5s': '5S', '10s': '10S', '15s': '15S', '30s': '30S',
-    '1m': '1', '3m': '3', '5m': '5', '15m': '15', '30m': '30', '45m': '45',
-    '1h': '60', '2h': '120', '3h': '180', '4h': '240',
-    '1d': 'D', '1w': 'W',
-    // Uppercase aliases
-    '1D': 'D', '1W': 'W', '1M': 'M', '4H': '240',
-    // Pass-through canonical keys
-    'D': 'D', 'W': 'W', 'M': 'M',
-};
-
 function normalizeTimeframeKey(timeframe: string): string {
-    // Direct match (case-sensitive for '1M' vs '1m')
-    if (TF_NORMALIZE[timeframe] !== undefined) return TF_NORMALIZE[timeframe];
-    // Try lowercase
-    const lower = timeframe.toLowerCase();
-    if (TF_NORMALIZE[lower] !== undefined) return TF_NORMALIZE[lower];
-    // Already a canonical number ('1', '60', '240', etc.)
-    if (/^\d+$/.test(timeframe)) return timeframe;
-    // Second-based ('30S', etc.)
-    if (/^\d+S$/i.test(timeframe)) return timeframe.toUpperCase();
-    return timeframe;
+    return canonicalTimeframe(timeframe) ?? timeframe;
 }
 
 /**

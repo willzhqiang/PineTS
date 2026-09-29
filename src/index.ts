@@ -17,7 +17,9 @@ export { AlpacaProvider } from './marketData/Alpaca/AlpacaProvider.class';
 export type { IProvider, IFootprintProvider, ISymbolInfo, BaseProviderConfig, ApiKeyProviderConfig } from './marketData/IProvider';
 export { hasFootprintData } from './marketData/IProvider';
 export type { Kline, FootprintBar, FootprintLevel, PeriodType } from './marketData/types';
-export { computeNextPeriodStart, localTimeToUTC, computeSessionClose, TIMEFRAME_SECONDS, TIMEFRAME_PERIOD_INFO } from './marketData/types';
+export { computeNextPeriodStart, localTimeToUTC, computeSessionClose, TIMEFRAME_SECONDS, TIMEFRAME_PERIOD_INFO, getTimeframeSeconds, getTimeframePeriodInfo } from './marketData/types';
+export { parseTimeframe, canonicalTimeframe, timeframeSeconds, compareTimeframes, isValidTimeframe } from './marketData/timeframe';
+export type { ParsedTimeframe, TimeframeUnit } from './marketData/timeframe';
 export { aggregateCandles, selectSubTimeframe, getAggregationRatio } from './marketData/aggregation';
 
 export { splitTickerModifier, stripTickerModifier, withTickerModifier } from './tickerModifier';

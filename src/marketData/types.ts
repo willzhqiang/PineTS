@@ -3,6 +3,8 @@
 /**
  * Standardized candlestick / kline data shape used by all providers.
  */
+import { parseTimeframe, timeframeSeconds } from './timeframe';
+
 export interface Kline {
     openTime: number;
     open: number;
@@ -94,6 +96,14 @@ export const TIMEFRAME_SECONDS: Record<string, number> = {
 };
 
 /**
+ * Nominal duration in seconds for ANY valid Pine timeframe (`'10'`, `'90'`, `'2h'`, `'3D'`, ...).
+ * Prefer this over indexing `TIMEFRAME_SECONDS`, which only lists a fixed set.
+ */
+export function getTimeframeSeconds(timeframe: string): number | undefined {
+    return timeframeSeconds(timeframe) ?? undefined;
+}
+
+/**
  * Map from canonical timeframe to { periodType, multiplier }.
  * Used by aggregation to determine grouping strategy.
  */
@@ -118,6 +128,18 @@ export const TIMEFRAME_PERIOD_INFO: Record<string, { periodType: PeriodType; mul
     'W':   { periodType: 'week',   multiplier: 1 },
     'M':   { periodType: 'month',  multiplier: 1 },
 };
+
+/**
+ * `{ periodType, multiplier }` for ANY valid Pine timeframe. Hours are expressed as
+ * `{ hour, N }` when the minute count is a whole number of hours, otherwise as minutes.
+ */
+export function getTimeframePeriodInfo(timeframe: string): { periodType: PeriodType; multiplier: number } | undefined {
+    const p = parseTimeframe(timeframe);
+    if (!p) return undefined;
+    if (p.unit === 'minute' && p.multiplier % 60 === 0) return { periodType: 'hour', multiplier: p.multiplier / 60 };
+    const periodType: Record<string, PeriodType> = { second: 'second', minute: 'minute', day: 'day', week: 'week', month: 'month' };
+    return { periodType: periodType[p.unit], multiplier: p.multiplier };
+}
 
 /**
  * Compute the start of the next period given an openTime (fixed duration math).

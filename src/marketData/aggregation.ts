@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { Kline, TIMEFRAME_SECONDS } from './types';
+import { Kline } from './types';
+import { parseTimeframe, timeframeSeconds } from './timeframe';
 
 // ── Ordered list of all canonical timeframes (ascending by duration) ────
-
-const ORDERED_TIMEFRAMES = [
-    '1S', '5S', '10S', '15S', '30S',
-    '1', '3', '5', '15', '30', '45',
-    '60', '120', '180', '240',
-    'D', 'W', 'M',
-];
 
 // ── Public API ──────────────────────────────────────────────────────────
 
@@ -33,16 +27,23 @@ export function selectSubTimeframe(
         return supportedTimeframes.has('D') ? 'D' : null;
     }
 
-    const targetSeconds = TIMEFRAME_SECONDS[targetTimeframe];
-    if (!targetSeconds) return null;
+    const target = parseTimeframe(targetTimeframe);
+    if (!target) return null;
+    // Multi-week / multi-month bars need calendar grouping that fixed-ratio aggregation cannot do.
+    if ((target.unit === 'week' || target.unit === 'month') && target.multiplier > 1) return null;
+    const targetSeconds = target.seconds;
 
-    // Consider only timeframes strictly smaller than the target
-    const candidates = ORDERED_TIMEFRAMES.filter(tf =>
-        tf !== 'W' && tf !== 'M' &&
-        supportedTimeframes.has(tf) &&
-        TIMEFRAME_SECONDS[tf] < targetSeconds &&
-        targetSeconds % TIMEFRAME_SECONDS[tf] === 0,
-    );
+    // Consider only timeframes strictly smaller than the target, ascending by duration
+    const candidates = [...supportedTimeframes]
+        .map(tf => ({ tf, sec: timeframeSeconds(tf) }))
+        .filter((c): c is { tf: string; sec: number } =>
+            c.sec !== null &&
+            c.tf !== 'W' && c.tf !== 'M' &&
+            c.sec < targetSeconds &&
+            targetSeconds % c.sec === 0,
+        )
+        .sort((a, b) => a.sec - b.sec)
+        .map(c => c.tf);
 
     if (candidates.length === 0) return null;
 
@@ -60,8 +61,8 @@ export function getAggregationRatio(targetTimeframe: string, subTimeframe: strin
     if (targetTimeframe === 'W' || targetTimeframe === 'M') {
         return Infinity; // Calendar-based grouping — variable bars per group
     }
-    const targetSec = TIMEFRAME_SECONDS[targetTimeframe];
-    const subSec = TIMEFRAME_SECONDS[subTimeframe];
+    const targetSec = timeframeSeconds(targetTimeframe);
+    const subSec = timeframeSeconds(subTimeframe);
     if (!targetSec || !subSec || subSec === 0) return Infinity;
     return targetSec / subSec;
 }
