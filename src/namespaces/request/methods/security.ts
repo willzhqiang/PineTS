@@ -279,9 +279,14 @@ export function security(context: any) {
             return Array.isArray(value) ? [value] : value;
         }
 
-        // Buffer to extend date range and ensure bar boundaries are covered: 30 days, or two
-        // bars of the requested timeframe so lookahead_off has a completed bar at the start.
-        const buffer = Math.max(1000 * 60 * 60 * 24 * 30, 2 * reqSeconds * 1000);
+        // Buffer to extend date range and ensure bar boundaries are covered: 30 days, or a bar-count
+        // warmup measured in the REQUESTED timeframe. Upstream needs two bars so lookahead_off has a
+        // completed bar at the start; recursive indicators (ta.ema / ta.rma / ta.atr ...) inside the
+        // secondary are seeded by the FIRST bars it sees, so a daily secondary with ~40 bars leaves
+        // Wilder ATR(14) ~0.6% off (TradingView computes over the full history). 250 bars leave
+        // (13/14)^250 ≈ 1e-8 of the RMA(14) seed influence.
+        const SECONDARY_WARMUP_BARS = 250;
+        const buffer = Math.max(1000 * 60 * 60 * 24 * 30, SECONDARY_WARMUP_BARS * reqSeconds * 1000);
 
         // Determine start date for secondary context.
         // Use context.sDate if available, otherwise derive from the earliest bar's
